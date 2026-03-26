@@ -1,1 +1,24 @@
--Użyj tokenizera od 
+-Użyj tokenizera od SmolLM 
+- pobierz i zakoduj dane pobierz mniejszą wersje nie cały pakiet
+-Stwórz wszystkie pliki ważne
+
+-zbuduj model:
+    zrób config.py
+    Zrób warstwe 
+    Użył Flash attencion
+    Użyć GQA mniej głowic na dla K/V 
+    Użyć RoPE zmienia pozycje embbeding na lepszy
+    Użyć bfloat16 
+    Użyć model.compile i mixed precision 
+    Dodać gradient checkpoint do klasy 
+    Może użyć RMSNorm zobaczyć co to 
+
+ -Sprawdź i zrób overfiting na pojedyńczym batchu by zobaczyć czy model się uczy 
+ 
+ - Napisać kod do pobrania całego datasetu i zrobienia go na shardy juz stokenizowane
+
+ - zrobić faktyczną pętle treningową:
+     -akumulacje gradientu zrobić 
+     - model.compile , mixed precision i ddp 
+     - 
+ -Użyć runpod lub lambda do wynajęcia kart
