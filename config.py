@@ -13,3 +13,5 @@ class SmallTransformerConfig:
     head_dim :int = 64
 
     max_position_embeddings :int = 2048 
+
+    Rope_theta : int = 10000.0

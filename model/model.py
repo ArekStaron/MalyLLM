@@ -2,6 +2,31 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 
+def precompute_rope(head_dim , max_seq_len , rope_theta):
+    freq = 1 / (rope_theta ** torch.arange(0 , head_dim ,2).float() /head_dim)
+    possition = torch.arange(max_seq_len)
+
+    angles = torch.outer(possition , freq)
+    angles = torch.cat([angles , angles] , dim=-1)
+
+    return angles.cos() , angles.sin()
+
+
+
+
+def rotate_half(x):
+        x1 = x[... ,: x.shape[-1] //2] # (B,n_h , T, C //2) 
+        x2 = x[... , x.shape[-1] //2:]
+        
+        return torch.cat((x1,x2), dim=-1)
+
+def apply_rope(q , k , sin , cos):
+    q = q * cos + (rotate_half(q) * sin)
+    k = k * cos + (rotate_half(k) * sin)
+
+    return q , k  
+
+
 class Attencion(nn.Module):
     def __init__(self , config):
         super().__init__()
@@ -9,6 +34,10 @@ class Attencion(nn.Module):
         assert config.hidden_dim % config.head_dim == 0 
         assert config.num_attention_heads % config.num_key_value_heads == 0
 
+        self.cos , self.sin = precompute_rope(config.head_dim , config.max_position_embeddings , config.Rope_theta)
+
+        self.register_buffer("cos", self.cos)
+        self.register_buffer("sin" , self.sin )
 
         self.kv_dim = config.head_dim * config.num_key_value_heads
 
@@ -23,6 +52,8 @@ class Attencion(nn.Module):
         self.n_head = config.num_attention_heads
         self.n_kv_heads= config.num_key_value_heads
         self.head_dim = config.head_dim
+
+
 
 
     def forward(self , x):
@@ -42,6 +73,8 @@ class Attencion(nn.Module):
         k = k.view(B,T , self.n_kv_heads , self.head_dim).transpose(1,2)
         v = v.view(B,T , self.n_kv_heads , self.head_dim).transpose(1,2)
 
+        #tutaj dodać nie Rope
+        apply_rope(q , k ,self.sin[:T] , self.cos[:T] )
 
         # from (B,n_kv_heads , T , self.head_dim ) --> (B,self.n_head, T , self.head_dim)
         # For dim to match in k , v and q 
@@ -53,6 +86,8 @@ class Attencion(nn.Module):
         y = F.scaled_dot_product_attention(q,k,v , is_causal=True) # 
 
         y = y.transpose(1,2).reshape(B,T,C)
+
+        y = self.c_proj(y)
 
         return y 
 
