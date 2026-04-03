@@ -34,10 +34,10 @@ class Attencion(nn.Module):
         assert config.hidden_dim % config.head_dim == 0 
         assert config.num_attention_heads % config.num_key_value_heads == 0
 
-        self.cos , self.sin = precompute_rope(config.head_dim , config.max_position_embeddings , config.Rope_theta)
+        cos , sin = precompute_rope(config.head_dim , config.max_position_embeddings , config.Rope_theta)
 
-        self.register_buffer("cos", self.cos)
-        self.register_buffer("sin" , self.sin )
+        self.register_buffer("cos", cos)
+        self.register_buffer("sin" , sin )
 
         self.kv_dim = config.head_dim * config.num_key_value_heads
 
@@ -45,7 +45,7 @@ class Attencion(nn.Module):
         
         self.kv_proj = nn.Linear(config.hidden_dim , self.kv_dim * 2 , bias= False)
 
-        self.c_proj = nn.Linear(config.hidden_dim , config.hidden_dim)
+        self.o_proj = nn.Linear(config.hidden_dim , config.hidden_dim)
 
 
         self.n_emdb = config.hidden_dim
@@ -73,7 +73,7 @@ class Attencion(nn.Module):
         k = k.view(B,T , self.n_kv_heads , self.head_dim).transpose(1,2)
         v = v.view(B,T , self.n_kv_heads , self.head_dim).transpose(1,2)
 
-        #tutaj dodać nie Rope
+        
         apply_rope(q , k ,self.sin[:T] , self.cos[:T] )
 
         # from (B,n_kv_heads , T , self.head_dim ) --> (B,self.n_head, T , self.head_dim)
@@ -87,8 +87,26 @@ class Attencion(nn.Module):
 
         y = y.transpose(1,2).reshape(B,T,C)
 
-        y = self.c_proj(y)
+        y = self.o_proj(y)
 
         return y 
 
-        
+
+
+class MLP(nn.Module):
+     
+    def __init__(self, config):
+        super().__init__()
+        self.gate_proj = nn.Linear(config.hidden_dim , config.intermediate_dim , bias=False)
+        self.up_proj = nn.Linear(config.hidden_dim , config.intermediate_dim , bias=False)
+        self.down_proj = nn.Linear(config.intermediate_dim , config.hidden_dim , bias=False)
+
+    
+    def forward(self , x):
+        return self.down_proj(F.silu(self.gate_proj(x)) * self.up_proj(x))
+    
+
+
+
+
+
