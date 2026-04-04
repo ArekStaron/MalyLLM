@@ -107,6 +107,35 @@ class MLP(nn.Module):
     
 
 
+class RMSNorm(nn.Module):
+
+    def __init__(self, hidden_size ,eps : float = 1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.eps = eps
+
+    def forward(self, x): 
+        rms = torch.sqrt(torch.mean(x**2 , dim=-1 , keepdim=True) + self.eps)
+
+        return (x / rms) * self.weight
+
+
+class Block(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        self.rms1 = RMSNorm(config.hidden_dim)
+        self.rms2 = RMSNorm(config.hidden_dim)
+        self.attn = Attencion(config)
+        self.mlp = MLP(config)
+
+    def forward(self, x):
+        x = x + self.attn(self.rms1(x))
+        x = x + self.mlp(self.rms2(x))
+
+        return x 
+    
+
 
 
 
