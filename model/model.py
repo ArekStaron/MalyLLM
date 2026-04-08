@@ -15,7 +15,7 @@ def precompute_rope(head_dim , max_seq_len , rope_theta):
 
 
 def rotate_half(x):
-        x1 = x[... ,: x.shape[-1] //2] # (B,n_h , T, C //2) 
+        x1 = x[... ,: x.shape[-1] //2] 
         x2 = x[... , x.shape[-1] //2:]
         
         return torch.cat((x1,x2), dim=-1)
@@ -46,7 +46,8 @@ class Attencion(nn.Module):
         self.kv_proj = nn.Linear(config.hidden_dim , self.kv_dim * 2 , bias= False)
 
         self.o_proj = nn.Linear(config.hidden_dim , config.hidden_dim)
-
+        
+        self.o_proj.SCALE_INIT = True
 
         self.n_emdb = config.hidden_dim
         self.n_head = config.num_attention_heads
@@ -83,7 +84,7 @@ class Attencion(nn.Module):
         k = k.repeat_interleave(n_repats , dim=1)
         v = v.repeat_interleave(n_repats , dim=1)
 
-        y = F.scaled_dot_product_attention(q,k,v , is_causal=True) # 
+        y = F.scaled_dot_product_attention(q,k,v , is_causal=True) 
 
         y = y.transpose(1,2).reshape(B,T,C)
 
@@ -101,6 +102,7 @@ class MLP(nn.Module):
         self.up_proj = nn.Linear(config.hidden_dim , config.intermediate_dim , bias=False)
         self.down_proj = nn.Linear(config.intermediate_dim , config.hidden_dim , bias=False)
 
+        self.down_proj.SCALE_INIT = True
     
     def forward(self , x):
         return self.down_proj(F.silu(self.gate_proj(x)) * self.up_proj(x))
@@ -136,6 +138,37 @@ class Block(nn.Module):
         return x 
     
 
+class MalyLLM(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
 
+        self.transformer = nn.ModuleDict(dict(
+            embedding = nn.Embedding(config.vocab_size , config.hidden_dim),
+            blocks = nn.ModuleList(Block(config) for _ in range(config.num_layer)),     
+            f_rms = RMSNorm(config.hidden_dim)
+        
+        ))
+        
+        self.lm_head  = nn.Linear(config.hidden_dim , config.vocab_size , bias=False)
 
+        self.transformer.embedding.weight   = self.lm_head  
 
+        self.apply(self.__initweight)
+
+    def __initweight(self, module):
+        std = 0.02 
+
+        if isinstance(module , nn.Linear):
+            if hasattr(module , "SCALE_INIT"):
+                std *= (2 * self.config. num_layer)**0.5
+
+            nn.init.normal_(module.weight , mean=0.0 , std = std)
+
+            if module.bias is not None:
+                nn.init.zeros_(module.bias,)
+        
+        elif isinstance(module,nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0 , std=std)
+    
+        
