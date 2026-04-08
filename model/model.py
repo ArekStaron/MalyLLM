@@ -4,9 +4,9 @@ import torch.nn.functional as F
 
 def precompute_rope(head_dim , max_seq_len , rope_theta):
     freq = 1 / (rope_theta ** torch.arange(0 , head_dim ,2).float() /head_dim)
-    possition = torch.arange(max_seq_len)
+    position = torch.arange(max_seq_len)
 
-    angles = torch.outer(possition , freq)
+    angles = torch.outer(position , freq)
     angles = torch.cat([angles , angles] , dim=-1)
 
     return angles.cos() , angles.sin()
@@ -15,10 +15,10 @@ def precompute_rope(head_dim , max_seq_len , rope_theta):
 
 
 def rotate_half(x):
-        x1 = x[... ,: x.shape[-1] //2] 
-        x2 = x[... , x.shape[-1] //2:]
+    x1 = x[... ,: x.shape[-1] //2] 
+    x2 = x[... , x.shape[-1] //2:]
         
-        return torch.cat((x1,x2), dim=-1)
+    return torch.cat((-x2,x1), dim=-1)
 
 def apply_rope(q , k , sin , cos):
     q = q * cos + (rotate_half(q) * sin)
@@ -27,7 +27,7 @@ def apply_rope(q , k , sin , cos):
     return q , k  
 
 
-class Attencion(nn.Module):
+class Attention(nn.Module):
     def __init__(self , config):
         super().__init__()
         assert config.hidden_dim % config.num_attention_heads ==0
@@ -45,11 +45,11 @@ class Attencion(nn.Module):
         
         self.kv_proj = nn.Linear(config.hidden_dim , self.kv_dim * 2 , bias= False)
 
-        self.o_proj = nn.Linear(config.hidden_dim , config.hidden_dim)
+        self.o_proj = nn.Linear(config.hidden_dim , config.hidden_dim , bias=False)
         
         self.o_proj.SCALE_INIT = True
 
-        self.n_emdb = config.hidden_dim
+        self.n_embd = config.hidden_dim
         self.n_head = config.num_attention_heads
         self.n_kv_heads= config.num_key_value_heads
         self.head_dim = config.head_dim
@@ -75,14 +75,14 @@ class Attencion(nn.Module):
         v = v.view(B,T , self.n_kv_heads , self.head_dim).transpose(1,2)
 
         
-        apply_rope(q , k ,self.sin[:T] , self.cos[:T] )
+        q , k = apply_rope(q , k ,self.sin[:T] , self.cos[:T] )
 
         # from (B,n_kv_heads , T , self.head_dim ) --> (B,self.n_head, T , self.head_dim)
         # For dim to match in k , v and q 
-        n_repats = self.n_head //self.n_kv_heads
+        n_repeats = self.n_head //self.n_kv_heads
 
-        k = k.repeat_interleave(n_repats , dim=1)
-        v = v.repeat_interleave(n_repats , dim=1)
+        k = k.repeat_interleave(n_repeats , dim=1)
+        v = v.repeat_interleave(n_repeats , dim=1)
 
         y = F.scaled_dot_product_attention(q,k,v , is_causal=True) 
 
@@ -128,7 +128,7 @@ class Block(nn.Module):
         super().__init__()
         self.rms1 = RMSNorm(config.hidden_dim)
         self.rms2 = RMSNorm(config.hidden_dim)
-        self.attn = Attencion(config)
+        self.attn = Attention(config)
         self.mlp = MLP(config)
 
     def forward(self, x):
@@ -152,7 +152,7 @@ class MalyLLM(nn.Module):
         
         self.lm_head  = nn.Linear(config.hidden_dim , config.vocab_size , bias=False)
 
-        self.transformer.embedding.weight   = self.lm_head  
+        self.lm_head =  self.transformer.embedding.weight     
 
         self.apply(self.__initweight)
 
@@ -161,7 +161,7 @@ class MalyLLM(nn.Module):
 
         if isinstance(module , nn.Linear):
             if hasattr(module , "SCALE_INIT"):
-                std *= (2 * self.config. num_layer)**0.5
+                std *= (2 * self.config. num_layer)**-0.5
 
             nn.init.normal_(module.weight , mean=0.0 , std = std)
 
@@ -171,4 +171,7 @@ class MalyLLM(nn.Module):
         elif isinstance(module,nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0 , std=std)
     
+        
+    def forward(self , x , target = None):
+        pass
         
