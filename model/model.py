@@ -21,6 +21,9 @@ def rotate_half(x):
     return torch.cat((-x2,x1), dim=-1)
 
 def apply_rope(q , k , sin , cos):
+    cos = cos.unsqueeze(0).unsqueeze(1)
+    sin = sin.unsqueeze(0).unsqueeze(1)
+    
     q = q * cos + (rotate_half(q) * sin)
     k = k * cos + (rotate_half(k) * sin)
 
@@ -152,7 +155,7 @@ class MalyLLM(nn.Module):
         
         self.lm_head  = nn.Linear(config.hidden_dim , config.vocab_size , bias=False)
 
-        self.lm_head =  self.transformer.embedding.weight     
+        self.lm_head.weight = self.transformer.embedding.weight     
 
         self.apply(self.__initweight)
 
@@ -172,6 +175,23 @@ class MalyLLM(nn.Module):
             nn.init.normal_(module.weight, mean=0.0 , std=std)
     
         
-    def forward(self , x , target = None):
-        pass
+    def forward(self , idx , target = None):
+        B , T = idx.size()
+
+        # Make decorator to RoPE to remove this line
+        assert T<= self.config.max_position_embeddings
+
+        x = self.transformer.embedding(idx)
+
+        for block in self.transformer.blocks:
+            x = block(x)
         
+        x = self.transformer.f_rms(x)
+        logits = self.lm_head(x)
+        loss = None
+        if target is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), target.view(-1))
+        
+        return logits , loss
+    
+    

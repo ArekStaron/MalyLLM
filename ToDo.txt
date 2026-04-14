@@ -22,3 +22,6 @@
      - model.compile , mixed precision i ddp 
      - 
  -Użyć runpod lub lambda do wynajęcia kart
+
+
+ -Dodać Fine tuning z SmolTalk
