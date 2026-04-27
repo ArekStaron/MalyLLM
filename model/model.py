@@ -13,7 +13,7 @@ def precompute_rope(head_dim , max_seq_len , rope_theta):
 
 
 
-
+#TODO Dodaj dekorator do rozszerzenie RoPE o wiekszy kontekst niż 2048
 def rotate_half(x):
     x1 = x[... ,: x.shape[-1] //2] 
     x2 = x[... , x.shape[-1] //2:]
