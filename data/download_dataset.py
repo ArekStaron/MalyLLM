@@ -7,12 +7,12 @@ from transformers import AutoTokenizer
 
 
 
-
-os.makedirs("data/tensor_data", exist_ok=True)
+OUT_DIR = "data/numpy_data"
+os.makedirs(OUT_DIR, exist_ok=True)
 
 nprocs = max(1, os.cpu_count()//2)
 SHARD_SIZE = 100_00
-OUT_DIR = "data/tensor_data"
+
 
 def all_thead_tokenizer():
     global tokenizer 
@@ -34,6 +34,7 @@ if __name__ == "__main__":
     token_count = 0
     shard_idx = 0
     progress = tqdm(total=SHARD_SIZE, desc=f"Shard {shard_idx}", unit="tok")
+    prefix = "train" if shard_idx > 0 else "valid"
 
     with mp.Pool(nprocs , initializer=all_thead_tokenizer) as pool:
         for tokens in pool.imap(tokenize,data , chunksize = 16):
@@ -50,7 +51,7 @@ if __name__ == "__main__":
                 progress.update(to_write)
 
                 if token_count == SHARD_SIZE:
-                    np.save(os.path.join(OUT_DIR, f"shard_{shard_idx:04d}.npy"), current_tokens)
+                    np.save(os.path.join(OUT_DIR, f"{prefix}_{shard_idx:04d}.npy"), current_tokens)
                     print(f"\nSaved shard {shard_idx}")
                     shard_idx += 1
                     token_count = 0
