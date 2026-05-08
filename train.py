@@ -215,10 +215,11 @@ def generate_text():
         decode = enc.decode(tokens)
         print(f"rank {ddp_rank} sample {i} text: {decode}")
 
+last_step = max_steps -1
+
 for step in range(max_steps):
     t0 = time.time()
 
-    last_step = (max_steps -1)
 
     if step % 250 ==0 or step == last_step:
         evaluate()
