@@ -27,14 +27,14 @@ if __name__ == "__main__":
     
     data = load_dataset("HuggingFaceFW/fineweb-edu",
                         name="sample-10BT",
-                        split="train[:500]")
+                        split="train[:1000]")
 
 
     current_tokens = np.empty((SHARD_SIZE,), dtype=np.uint16)
     token_count = 0
     shard_idx = 0
     progress = tqdm(total=SHARD_SIZE, desc=f"Shard {shard_idx}", unit="tok")
-    prefix = "train" if shard_idx > 0 else "valid"
+    
 
     with mp.Pool(nprocs , initializer=all_thead_tokenizer) as pool:
         for tokens in pool.imap(tokenize,data , chunksize = 16):
@@ -51,6 +51,7 @@ if __name__ == "__main__":
                 progress.update(to_write)
 
                 if token_count == SHARD_SIZE:
+                    prefix = "train" if shard_idx > 0 else "valid"
                     np.save(os.path.join(OUT_DIR, f"{prefix}_{shard_idx:04d}.npy"), current_tokens)
                     print(f"\nSaved shard {shard_idx}")
                     shard_idx += 1
