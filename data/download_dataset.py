@@ -11,7 +11,7 @@ OUT_DIR = "data/numpy_data"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 nprocs = max(1, os.cpu_count()//2)
-SHARD_SIZE = 100_00
+SHARD_SIZE = 100_000
 
 
 def all_thead_tokenizer():
