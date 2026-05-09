@@ -4,8 +4,10 @@ from tqdm import tqdm
 import multiprocessing as mp
 from datasets import load_dataset
 from transformers import AutoTokenizer
+from huggingface_hub import login
 
 
+login()
 
 OUT_DIR = "data/numpy_data"
 os.makedirs(OUT_DIR, exist_ok=True)

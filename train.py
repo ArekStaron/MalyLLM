@@ -134,7 +134,7 @@ optimizer = raw_model.configure_optimizers(weight_decay=0.1 , learning_rate= 6e-
 train_loader = DataLoader(B= B , T=T , process_rank=ddp_rank , num_processes= ddp_world_size , split="train")
 valid_loader = DataLoader(B= B , T=T , process_rank=ddp_rank , num_processes= ddp_world_size , split="val")
 
-#making log file for loss and gradient checkpoint 
+#making log file for loss and model checkpoint 
 log_dir = "log"
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, f"log.txt")
