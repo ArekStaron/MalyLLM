@@ -13,7 +13,7 @@ OUT_DIR = "data/numpy_data"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 nprocs = max(1, os.cpu_count()//2)
-SHARD_SIZE = 100_000
+SHARD_SIZE = 100_000_000
 
 
 def all_thead_tokenizer():
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     
     data = load_dataset("HuggingFaceFW/fineweb-edu",
                         name="sample-10BT",
-                        split="train[:1000]")
+                        split="train")
 
 
     current_tokens = np.empty((SHARD_SIZE,), dtype=np.uint16)

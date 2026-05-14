@@ -110,8 +110,8 @@ if master_process:
 
 max_lr = 6e-4
 min_lr = max_lr * 0.1   
-warmup_steps = 50#715
-max_steps = 500 #19073 # 10B // 0.5 mil 
+warmup_steps = 715
+max_steps = 19073 # 10B // 0.5 mil 
 
 
 def get_lr(it):
@@ -270,6 +270,6 @@ for step in range(max_steps):
     tokens_per_sec = token_process / t 
 
     if master_process:
-        print(f"step: {step:5d}|| loss: {loss_accum:6f} || lr: {lr:4e} || norm: {norm:4f} || time: {t}ms || token_per_sec {tokens_per_sec}") 
+        print(f"step: {step:.5d}|| loss: {loss_accum:.6f} || lr: {lr:.4e} || norm: {norm:.4f} || time: {t:.2f}ms || token_per_sec {tokens_per_sec:.2f}") 
 if ddp:
     destroy_process_group()
