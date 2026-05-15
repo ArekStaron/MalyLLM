@@ -21,22 +21,23 @@ Trained on the FineWeb dataset and published on HuggingFace.
 | Max sequence length  | 2 048  |
 
 ## Run Demo
-'''bash
+```bash
 pip install requirements_demo.txt
-start run_demo.py
-
+python run_demo.py
+```
 Requires CUDA and PyTorch with CUDA 12.6 support.
 
 
 # Training details
-Tokenizer: HuggingFaceTB/SmolLM-135M
-Batch size: 524 288 tokens (gradient accumulation)
-Max steps: 19 073 (~10B tokens)
-Optimizer: AdamW (betas 0.9/0.95, weight decay 0.1)
-Learning rate: cosine schedule (6e-4 → 6e-5, 715 warmup steps)
-Mixed precision: bfloat16
+- **Tokenizer:** HuggingFaceTB/SmolLM-135M
+- **Dataset:** FineWeb (~10B tokens)
+- **Batch size:** 524 288 tokens (gradient accumulation)
+- **Max steps:** 19 073
+- **Optimizer:** AdamW (β=0.9/0.95, weight decay 0.1)
+- **Learning rate:** cosine schedule 6e-4 → 6e-5, 715 warmup steps
+- **Precision:** bfloat16
 
 ![Loss curve](loss.png)
 
 # Model on HuggingFace
-ArekStaron/MalyLLM
+[ArekStaron/MalyLLM](https://huggingface.co/ArekStaron/MalyLLM)
