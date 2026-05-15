@@ -98,7 +98,7 @@ if ddp:
 
 total_batch_size =524_288 #2**19  ~~0.5 mil
 
-B = 16
+B = 32
 T = 2048 
 
 assert  total_batch_size % ( B * T * ddp_world_size)  ==0
@@ -223,9 +223,10 @@ for step in range(max_steps):
 
     if step % 250 ==0 or step == last_step:
         evaluate()
-        
-    if (step % 250==0 and step > 0) or step == last_step:
-        generate_text()
+
+    # doesn't work with torch.compile()   
+    #if (step % 250==0 and step > 0) or step == last_step:
+        #generate_text()
 
     model.train()
     optimizer.zero_grad()
@@ -270,6 +271,6 @@ for step in range(max_steps):
     tokens_per_sec = token_process / t 
 
     if master_process:
-        print(f"step: {step:.5d}|| loss: {loss_accum:.6f} || lr: {lr:.4e} || norm: {norm:.4f} || time: {t:.2f}ms || token_per_sec {tokens_per_sec:.2f}") 
+        print(f"step: {step:5d}|| loss: {loss_accum:.6f} || lr: {lr:.4e} || norm: {norm:.4f} || time: {t:.2f}s || token_per_sec {tokens_per_sec:.2f}") 
 if ddp:
     destroy_process_group()
