@@ -2,6 +2,25 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 import inspect
+import functools
+
+def dynamic_rope(forward_fn):
+    @functools.wraps(forward_fn)
+    def wrapper(self ,x):
+        B , T , C = x.shape
+
+        if T > self.max_seq_len_cached:
+        
+            scale = T / self.max_seq_len_cached
+            new_theta = self.rope_theta * scale **(self.head_dim/ (self.head_dim-2))
+            cos , sin = precompute_rope(self.head_dim , T , new_theta)
+            self.cos = cos.to(x.device)
+            self.sin = sin.to(x.device)
+            self.max_seq_len_cached = T 
+
+        return forward_fn(self , x)
+    return wrapper
+
 
 def precompute_rope(head_dim , max_seq_len , rope_theta):
     freq = 1 / (rope_theta ** torch.arange(0 , head_dim ,2).float() /head_dim)
@@ -14,7 +33,7 @@ def precompute_rope(head_dim , max_seq_len , rope_theta):
 
 
 
-#TODO Add decorator for bigger context size than 2048
+
 def rotate_half(x):
     x1 = x[... ,: x.shape[-1] //2] 
     x2 = x[... , x.shape[-1] //2:]
@@ -57,10 +76,10 @@ class Attention(nn.Module):
         self.n_head = config.num_attention_heads
         self.n_kv_heads= config.num_key_value_heads
         self.head_dim = config.head_dim
+        self.max_seq_len_cached = config.max_position_embeddings
+        self.rope_theta = config.Rope_theta
 
-
-
-
+    @dynamic_rope
     def forward(self , x):
 
         B , T , C = x.shape
@@ -178,9 +197,6 @@ class MalyLLM(nn.Module):
         
     def forward(self , idx , target = None):
         B , T = idx.size()
-
-        # Make decorator to RoPE to remove this line
-        assert T<= self.config.max_position_embeddings
 
         x = self.transformer.embedding(idx)
 
